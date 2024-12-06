@@ -1,28 +1,25 @@
-# AI Agent Projects
+# Claude AI Projects
 
-This repository serves as a collection of AI agent-related projects and experiments. It's designed to showcase various implementations of AI agents, their capabilities, and practical applications.
+This repository contains various software projects and experiments created with the assistance of Claude AI. Each project is organized in its own directory with complete documentation and implementation details.
 
 ## Repository Structure
 
-The repository will be organized into different directories based on project types:
+Each project directory will contain:
+- Source code and implementation files
+- A detailed README explaining the project's purpose and functionality
+- Documentation including setup and usage instructions
+- Any necessary configuration files
 
-- `/autonomous-agents` - Projects focused on autonomous decision-making agents
-- `/llm-agents` - Agents built using Large Language Models
-- `/multi-agent-systems` - Projects involving multiple agents interacting with each other
-- `/utils` - Shared utilities and helper functions
-- `/examples` - Example implementations and demos
+## Projects
+
+Projects will be added here as they are developed. Each project will be in its own directory with a descriptive name.
 
 ## Getting Started
 
-Each project directory will contain:
-- A detailed README with project-specific information
-- Source code and dependencies
-- Documentation and usage examples
-- Test cases where applicable
-
-## Contributing
-
-Feel free to contribute to any of the projects by submitting pull requests or opening issues for discussion.
+To use any project in this repository:
+1. Navigate to the specific project directory
+2. Follow the setup instructions in the project's README
+3. Check the documentation for usage details
 
 ## License
 
