@@ -1,5 +1,6 @@
-import osrom github import Github
-from typing import Optional
+import os
+from github import Github
+from typing import Dict, Optional
 from dotenv import load_dotenv
 
 class GitHubIntegration:
