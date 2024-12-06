@@ -25,7 +25,7 @@ def example_github():
     
     # Save the code to GitHub
     result = github.create_file(
-        repo_name="your-username/your-repo",
+        repo_name="berlinbra/ai-agent-projects",  # Updated to your actual repository
         file_path="algorithms/bubble_sort.py",
         content=code,
         commit_message="Add bubble sort implementation"
