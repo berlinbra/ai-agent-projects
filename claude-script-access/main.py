@@ -98,7 +98,6 @@ class ClaudeDesktop:
                     raise Exception(f"Failed to paste text after {retry_count} attempts: {str(e)}")
                 time.sleep(1)  # Wait before retrying
 
-
 # Example usage
 if __name__ == "__main__":
     claude = ClaudeDesktop()
