@@ -6,18 +6,20 @@ import time
 from PIL import ImageGrab, Image
 import cv2
 import numpy as np
+import pyperclip
+from typing import Optional
 
 class ClaudeDesktop:
     def __init__(self):
-        self.config_path = os.path.expandvars(r'%APPDATA%\Claude\claude_desktop_config.json')
-        self.exe_path = r'C:\Users\psnbm\AppData\Local\AnthropicClaude\claude.exe'
+        self.config_path = os.path.expandvars(r'%APPDATA%\\Claude\\claude_desktop_config.json')
+        self.exe_path = r'C:\\Users\\psnbm\\AppData\\Local\\AnthropicClaude\\claude.exe'
 
         self.script_dir = os.path.dirname(os.path.abspath(__file__))
         self.allow_button_path = os.path.join(self.script_dir, 'allow_button.png')
         self.chat_button_path = os.path.join(self.script_dir, 'chat_button.png')
         
         # Add a safety delay for pyautogui
-        pyautogui.PAUSE = 1
+        pyautogui.PAUSE = 0.5  # Reduced from 1 to 0.5 for better responsiveness
         pyautogui.FAILSAFE = True
         
     def launch(self):
@@ -35,7 +37,7 @@ class ClaudeDesktop:
     def check_for_permission_dialog(self, timeout=2):
         """Check if the permission dialog is visible"""
         start_time = time.time()
-        print("checking for dialoge")
+        print("checking for dialog")
         while time.time() - start_time < timeout:
             try:
                 # Look for the chat permission text/button
@@ -56,7 +58,6 @@ class ClaudeDesktop:
                 print(f"Looking for button image at: {self.allow_button_path}")
                 allow_button = pyautogui.locateOnScreen(self.allow_button_path, confidence=0.8)
                 if allow_button:
-                    
                     pyautogui.click(allow_button)
                     time.sleep(0.5)
                     return True
@@ -77,7 +78,6 @@ class ClaudeDesktop:
         - README.md
         - .gitignore
         
-        
         Use the GitHub MCP to create this project."""
 
         self.send_prompt(prompt)
@@ -85,22 +85,73 @@ class ClaudeDesktop:
         self.handle_permissions()
         time.sleep(2)  # Wait a bit in case of multiple permission requests
         self.handle_permissions()
+
+    def _paste_text(self, text: str, retry_count: int = 3):
+        """Helper method to paste text using clipboard
         
-    def send_prompt(self, prompt: str):
-        """Send a prompt to Claude"""
-        pyautogui.write(prompt)
-        pyautogui.press('enter')
+        Args:
+            text (str): Text to paste
+            retry_count (int): Number of retry attempts
+        """
+        for attempt in range(retry_count):
+            try:
+                # Copy to clipboard
+                pyperclip.copy(text)
+                time.sleep(0.2)  # Wait for clipboard
+                
+                # Paste using Ctrl+V
+                pyautogui.hotkey('ctrl', 'v')
+                time.sleep(0.2)  # Wait for paste to complete
+                return
+            except Exception as e:
+                if attempt == retry_count - 1:  # Last attempt
+                    raise Exception(f"Failed to paste text after {retry_count} attempts: {str(e)}")
+                time.sleep(1)  # Wait before retrying
+        
+    def send_prompt(self, prompt: str, chunk_size: Optional[int] = None, retry_count: int = 3):
+        """Send a prompt to Claude using clipboard for reliability
+        
+        Args:
+            prompt (str): The prompt to send
+            chunk_size (Optional[int]): Size of chunks to split text into if needed
+            retry_count (int): Number of times to retry if the operation fails
+        """
+        original_clipboard = pyperclip.paste()  # Save original clipboard content
+        
+        try:
+            if chunk_size and len(prompt) > chunk_size:
+                # Split into chunks if needed
+                chunks = [prompt[i:i + chunk_size] for i in range(0, len(prompt), chunk_size)]
+                for chunk in chunks:
+                    self._paste_text(chunk, retry_count)
+                    time.sleep(0.5)  # Wait between chunks
+            else:
+                self._paste_text(prompt, retry_count)
+            
+            # Send the message
+            time.sleep(0.3)  # Short wait before pressing enter
+            pyautogui.press('enter')
+            
+        finally:
+            # Restore original clipboard content
+            pyperclip.copy(original_clipboard)
+            
         # Check for permissions popup after sending prompt
         self.handle_permissions()
 
 # Example usage
-claude = ClaudeDesktop()
+if __name__ == "__main__":
+    claude = ClaudeDesktop()
 
-# Launch Claude
-claude.launch()
+    # Launch Claude
+    claude.launch()
 
-# Start a new chat
-claude.new_chat()
+    # Start a new chat
+    claude.new_chat()
 
-# Send the weather prompt
-claude.create_github_project("Create a python project that is a game of battleship", "battleships-test", "berlinbra")
+    # Create a GitHub project
+    claude.create_github_project(
+        "Create a python project that is a game of battleship",
+        "battleships-test",
+        "berlinbra"
+    )
