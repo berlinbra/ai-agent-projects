@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 import pyperclip
 from typing import Optional
+import psutil
 
 class ClaudeDesktop:
     def __init__(self):
@@ -19,20 +20,62 @@ class ClaudeDesktop:
         self.chat_button_path = os.path.join(self.script_dir, 'chat_button.png')
         
         # Add a safety delay for pyautogui
-        pyautogui.PAUSE = 0.5  # Reduced from 1 to 0.5 for better responsiveness
+        pyautogui.PAUSE = 0.5
         pyautogui.FAILSAFE = True
         
+    def kill_existing_claude(self):
+        """Kill any existing Claude processes"""
+        for proc in psutil.process_iter(['pid', 'name']):
+            try:
+                # Check for both process name and window title
+                if 'claude.exe' in proc.name().lower():
+                    proc.kill()
+                    time.sleep(1)  # Wait for process to fully terminate
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                pass
+
     def launch(self):
-        """Launch Claude desktop"""
+        """Launch Claude desktop ensuring only one instance"""
+        # Kill any existing Claude processes
+        self.kill_existing_claude()
+        
+        # Launch new instance
         subprocess.Popen([self.exe_path])
-        time.sleep(3)
+        time.sleep(3)  # Wait for app to fully launch
+        
+        # Try to focus the window
+        self.focus_claude_window()
+
+    def focus_claude_window(self, max_attempts=5):
+        """Ensure Claude window is in focus"""
+        for _ in range(max_attempts):
+            try:
+                # Try different window titles that Claude might have
+                windows = ['Claude', 'Anthropic Claude', 'Claude AI']
+                for window in windows:
+                    window_region = pyautogui.getWindowsWithTitle(window)
+                    if window_region:
+                        window_region[0].activate()
+                        time.sleep(0.5)
+                        return True
+            except Exception as e:
+                print(f"Error focusing window: {e}")
+                time.sleep(1)
+        return False
         
     def new_chat(self):
         """Start a new chat using Ctrl+Alt+Space"""
+        # Ensure window is focused
+        self.focus_claude_window()
+        time.sleep(0.5)
+        
+        # Send the new chat shortcut
         pyautogui.hotkey('ctrl', 'alt', 'space')
         time.sleep(1)
+        
         # Clear any existing text
         pyautogui.hotkey('ctrl', 'a')
+        pyautogui.press('delete')
 
     def check_for_permission_dialog(self, timeout=2):
         """Check if the permission dialog is visible"""
@@ -54,7 +97,6 @@ class ClaudeDesktop:
         start_time = time.time()
         while self.check_for_permission_dialog():
             try:
-                # Look for button by text
                 print(f"Looking for button image at: {self.allow_button_path}")
                 allow_button = pyautogui.locateOnScreen(self.allow_button_path, confidence=0.8)
                 if allow_button:
@@ -83,67 +125,58 @@ class ClaudeDesktop:
         self.send_prompt(prompt)
         # Handle both GitHub and general permissions
         self.handle_permissions()
-        time.sleep(2)  # Wait a bit in case of multiple permission requests
+        time.sleep(2)
         self.handle_permissions()
 
     def _paste_text(self, text: str, retry_count: int = 3):
-        """Helper method to paste text using clipboard
-        
-        Args:
-            text (str): Text to paste
-            retry_count (int): Number of retry attempts
-        """
+        """Helper method to paste text using clipboard"""
         for attempt in range(retry_count):
             try:
+                # Ensure window is focused before pasting
+                self.focus_claude_window()
+                
                 # Copy to clipboard
                 pyperclip.copy(text)
-                time.sleep(0.2)  # Wait for clipboard
+                time.sleep(0.2)
                 
                 # Paste using Ctrl+V
                 pyautogui.hotkey('ctrl', 'v')
-                time.sleep(0.2)  # Wait for paste to complete
+                time.sleep(0.2)
                 return
             except Exception as e:
-                if attempt == retry_count - 1:  # Last attempt
+                if attempt == retry_count - 1:
                     raise Exception(f"Failed to paste text after {retry_count} attempts: {str(e)}")
-                time.sleep(1)  # Wait before retrying
+                time.sleep(1)
         
     def send_prompt(self, prompt: str, chunk_size: Optional[int] = None, retry_count: int = 3):
-        """Send a prompt to Claude using clipboard for reliability
+        """Send a prompt to Claude using clipboard for reliability"""
+        # Ensure window is focused
+        self.focus_claude_window()
         
-        Args:
-            prompt (str): The prompt to send
-            chunk_size (Optional[int]): Size of chunks to split text into if needed
-            retry_count (int): Number of times to retry if the operation fails
-        """
-        original_clipboard = pyperclip.paste()  # Save original clipboard content
+        original_clipboard = pyperclip.paste()
         
         try:
             if chunk_size and len(prompt) > chunk_size:
-                # Split into chunks if needed
                 chunks = [prompt[i:i + chunk_size] for i in range(0, len(prompt), chunk_size)]
                 for chunk in chunks:
                     self._paste_text(chunk, retry_count)
-                    time.sleep(0.5)  # Wait between chunks
+                    time.sleep(0.5)
             else:
                 self._paste_text(prompt, retry_count)
             
-            # Send the message
-            time.sleep(0.3)  # Short wait before pressing enter
+            time.sleep(0.3)
             pyautogui.press('enter')
             
         finally:
-            # Restore original clipboard content
             pyperclip.copy(original_clipboard)
             
-        # Check for permissions popup after sending prompt
         self.handle_permissions()
 
 # Example usage
 if __name__ == "__main__":
     claude = ClaudeDesktop()
 
-    # Launch Claude
+    # Launch Claude (will kill existing instances)
     claude.launch()
 
     # Start a new chat
