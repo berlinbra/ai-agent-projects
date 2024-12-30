@@ -8,7 +8,6 @@ import cv2
 import numpy as np
 import pyperclip
 from typing import Optional
-import psutil
 
 class ClaudeDesktop:
     def __init__(self):
@@ -24,18 +23,27 @@ class ClaudeDesktop:
         # Add a safety delay for pyautogui
         pyautogui.PAUSE = 0.5
         pyautogui.FAILSAFE = True
+        
+    def launch(self):
+        """Launch Claude desktop and wait for it to be ready"""
+        subprocess.Popen([self.exe_path])
+        time.sleep(3)  # Wait for app to launch
+        
+        # Wait for Claude logo to appear (indicates app is ready)
+        start_time = time.time()
+        while time.time() - start_time < 10:  # 10 second timeout
+            try:
+                if pyautogui.locateOnScreen(self.claude_logo_path, confidence=0.8):
+                    time.sleep(1)  # Extra wait to ensure app is fully ready
+                    return True
+            except Exception:
+                pass
+            time.sleep(0.5)
+        
+        raise Exception("Claude failed to launch properly")
 
     def find_and_click_image(self, image_path: str, timeout: int = 5, confidence: float = 0.8) -> bool:
-        """Find and click on an image with timeout and retry
-        
-        Args:
-            image_path: Path to the image to find
-            timeout: How long to search for in seconds
-            confidence: Confidence level for image matching (0-1)
-            
-        Returns:
-            bool: True if image was found and clicked, False otherwise
-        """
+        """Find and click on an image with timeout and retry"""
         start_time = time.time()
         while time.time() - start_time < timeout:
             try:
@@ -163,7 +171,10 @@ class ClaudeDesktop:
 if __name__ == "__main__":
     claude = ClaudeDesktop()
 
-    # Start a new chat
+    # First launch Claude and wait for it to be ready
+    claude.launch()
+
+    # Then start a new chat
     claude.new_chat()
 
     # Create a GitHub project
